@@ -1,0 +1,51 @@
+[tool.poetry]
+name = "smart-rental-pricing"
+version = "0.1.0"
+description = "Smart rental pricing for houses in Accra"
+authors = ["Dave <davidwyse48@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "^1.26"
+evidently = "^0.7.0"
+plotly = "^5.17.0"
+pandas = "^2.2.3"
+scikit-learn = "^1.6.1"
+joblib = "^1.4.2"
+fastapi = "^0.115.12"
+uvicorn = "^0.34.1"
+streamlit = "^1.44.1"
+mlflow = "^2.21.3"
+selenium = "^4.31.0"
+python-dotenv = "^1.1.0"
+requests = "^2.32.3"
+dynaconf = "^3.2.10"
+loguru = "^0.7.3"
+sqlite-utils = "^3.38"
+sqlalchemy = "^2.0.40"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+black = "^25.1.0"
+ruff = "^0.11.5"
+pre-commit = "^4.2.0"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "api"]
+addopts = "--disable-warnings"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["data", "mlruns"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
