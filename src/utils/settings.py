@@ -1,5 +1,5 @@
 from dynaconf import Dynaconf
 
 settings = Dynaconf(
-    envvar_prefix="DYNACONF", settings_files=["config/settings.toml"], load_dotenv=True
+    envvar_prefix=False, settings_files=["config/settings.yaml"], load_dotenv=True
 )
