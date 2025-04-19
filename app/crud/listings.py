@@ -9,7 +9,6 @@ from app.schema.listings import ListingCreate, ListingUpdate
 
 def create_listing(db: Session, data: ListingCreate):
     data_dict = data.model_dump()
-    data_dict["posted_date"] = data_dict.pop("posted_time", None)
     db_obj = Listing(**data_dict)
     db.add(db_obj)
     db.commit()
@@ -50,6 +49,7 @@ def update_listing(db: Session, listing_id: str, data: ListingUpdate):
 
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(db_obj, field, value)
+
     db.commit()
     db.refresh(db_obj)
     return db_obj
