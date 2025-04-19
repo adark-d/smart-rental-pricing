@@ -10,5 +10,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  api:
+      build:
+        context: .
+      container_name: fastapi_app
+      command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+      ports:
+        - "8000:8000"
+      volumes:
+        - .:/app
+      depends_on:
+        - db
+      env_file:
+        - .env
+
 volumes:
   postgres_data:
