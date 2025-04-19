@@ -25,6 +25,8 @@ loguru = "^0.7.3"
 sqlite-utils = "^3.38"
 sqlalchemy = "^2.0.40"
 orjson = "^3.10.16"
+alembic = "^1.15.2"
+psycopg2-binary = "^2.9.10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
