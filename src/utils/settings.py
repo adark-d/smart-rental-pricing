@@ -9,7 +9,8 @@ settings = Dynaconf(
 RAW_DIR = Path(settings.raw_data_dir)
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-PROCESSED_DIR = Path(settings.processed_data_dir)
-PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR = Path(settings.logs_dir)
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-use_thread = settings.use_thread
+FAILED_DIR = Path(settings.failed_data_dir)
+FAILED_DIR.mkdir(parents=True, exist_ok=True)
