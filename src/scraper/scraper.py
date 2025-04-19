@@ -4,11 +4,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from loguru import logger
-from scraper.collector import get_listing_links
-from scraper.parser import extract_detail_from_page
-from utils.scraper_utils import extract_listing_id, init_browser, save_json
 
-from src.utils.settings import RAW_DIR, use_thread
+from src.scraper.collector import get_listing_links
+from src.scraper.parser import extract_detail_from_page
+from src.utils.scraper_utils import extract_listing_id, init_browser, save_json
+from src.utils.settings import RAW_DIR
 
 
 def scrape_single_listing(url: str) -> dict | None:
@@ -16,47 +16,49 @@ def scrape_single_listing(url: str) -> dict | None:
     try:
         extracted_id = extract_listing_id(url)
         if extracted_id:
-            logger.info(f"[SCRAPING] {url}")
             time.sleep(random.uniform(2, 3))
             return extract_detail_from_page(driver, url, extracted_id)
+        else:
+            logger.warning(f"[SKIPPING] Not apartment listing: {url}")
     except Exception as e:
-        logger.error(f"[THREAD ERROR] Failed to scrape {url}: {e}")
+        logger.warning(f"[SCRAPE FAIL] {url}: {e}")
     finally:
         driver.quit()
     return None
 
 
-def main() -> None:
+def run_scraper() -> bool:
     driver = init_browser()
     try:
         links = get_listing_links(driver)
-        logger.info(f"Found {len(links)} links")
+        logger.info(f"Found {len(links)} links to scrape")
+    except Exception:
+        logger.exception("Failed to collect links")
+        return False
     finally:
         driver.quit()
 
     records = []
 
-    if use_thread:
-
-        max_workers = os.cpu_count()
-
+    try:
+        max_workers = min(8, os.cpu_count())
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(scrape_single_listing, url) for url in links]
-
             for i, future in enumerate(as_completed(futures), start=1):
                 result = future.result()
                 if result:
-                    logger.info(
-                        f"[{i}/{len(links)}] Scraped listing: {result['listing_id']}"
+                    logger.success(
+                        f"[OK] [{i}/{len(links)}] Scraped {result['listing_id']} | {result['url']}"
                     )
                     records.append(result)
-    else:
-        for i, url in enumerate(links):
-            logger.info(f"[{i+1}/{len(links)}] Scraping {url}")
-            link_results = scrape_single_listing(url)
+    except Exception:
+        logger.exception("Error during scraping process")
+        return False
 
-            if link_results:
-                records.append(link_results)
+    if not records:
+        logger.warning("No listings were scraped.")
+        return False
 
     save_json(f"{RAW_DIR}/apartment_listings.json", records)
-    logger.success(f"Saved {len(records)} listings")
+    logger.info(f"Saved {len(records)} listings to apartment_listings.json")
+    return True
