@@ -6,7 +6,13 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from utils.scraper_utils import clean_price, parse_features, parse_posted_time, safe_int
+
+from src.utils.scraper_utils import (
+    clean_price,
+    parse_features,
+    parse_posted_time,
+    safe_int,
+)
 
 
 def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None:
@@ -154,8 +160,6 @@ def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None
         else:
             description = ""
 
-        logger.success(f"[OK] Extracted successfully: {url}")
-
         return {
             "url": url,
             "listing_id": extracted_id,
@@ -164,7 +168,7 @@ def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None
             "region": region,
             "area": area,
             **icon_features,
-            "posted_time": parse_posted_time(posted_time),
+            "posted_date": parse_posted_time(posted_time),
             "amenities": amenities_str,
             "description": description,
             "features": parse_features(features),
