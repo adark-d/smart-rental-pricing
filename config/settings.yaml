@@ -1,18 +1,14 @@
-
-# === General App Settings ===
-app_port: 8000
-app_env: development
-use_thread: True
-
-# === Directory Paths ===
-data_dir: data/
-raw_data_dir: data/raw/
-processed_data_dir: data/processed/
-model_dir: models/
-metrics_dir: data/monitoring/reports
+# === Paths ===
+data_dir: "data/"
+raw_data_dir: "data/raw/"
+processed_data_dir: "data/processed/"
+failed_data_dir: "data/raw/failed_data/"
+logs_dir: "logs/"
 
 # === Scraper Settings ===
-base_url: https://jiji.com.gh/houses-apartments-for-rent
+base_url: "https://jiji.com.gh/houses-apartments-for-rent"
 scroll_count: 1
 headless: true
+
+# === Database Settings ===
 table_name: raw_listings
