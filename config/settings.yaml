@@ -6,9 +6,10 @@ failed_data_dir: "data/raw/failed_data/"
 logs_dir: "logs/"
 
 # === Scraper Settings ===
-base_url: "https://jiji.com.gh/houses-apartments-for-rent"
-scroll_count: 1
-headless: true
+base_url_rent: https://jiji.com.gh/houses-apartments-for-rent
+base_url_sale: https://jiji.com.gh/houses-apartments-for-sale
+scroll_count: -1
+headless: True
 
 # === Database Settings ===
 table_name: raw_listings
