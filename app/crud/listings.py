@@ -8,6 +8,12 @@ from app.schema.listings import ListingCreate, ListingUpdate
 
 
 def create_listing(db: Session, data: ListingCreate):
+    existing = get_listing(db, data.listing_id)
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Listing with ID '{data.listing_id}' already exists.",
+        )
     data_dict = data.model_dump()
     db_obj = Listing(**data_dict)
     db.add(db_obj)
@@ -27,6 +33,7 @@ def get_all_listings(
     region: Optional[str] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
+    listing_type: Optional[str] = None,
 ):
     query = db.query(Listing)
 
@@ -36,6 +43,8 @@ def get_all_listings(
         query = query.filter(Listing.price >= min_price)
     if max_price is not None:
         query = query.filter(Listing.price <= max_price)
+    if listing_type:
+        query = query.filter(Listing.listing_type == listing_type)
 
     return query.order_by(Listing.scraped_at.desc()).offset(skip).limit(limit).all()
 

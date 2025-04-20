@@ -21,11 +21,25 @@ def version_info():
 
 
 @router.get(
-    "/count", summary="Count total listings", dependencies=[Depends(require_admin)]
+    "/count",
+    summary="Count total listings",
+    description="Returns total listings, as well as breakdown by rent and sale.",
+    dependencies=[Depends(require_admin)],
 )
 def count_listings(db: Session = Depends(get_db)):
-    count = db.execute(text("SELECT COUNT(*) FROM listings;")).scalar()
-    return {"total_listings": count}
+    total = db.execute(text("SELECT COUNT(*) FROM listings")).scalar()
+    rent = db.execute(
+        text("SELECT COUNT(*) FROM listings WHERE listing_type = 'rent'")
+    ).scalar()
+    sale = db.execute(
+        text("SELECT COUNT(*) FROM listings WHERE listing_type = 'sale'")
+    ).scalar()
+
+    return {
+        "total_listings": total,
+        "rent_listings": rent,
+        "sale_listings": sale,
+    }
 
 
 @router.get(

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy import text
@@ -60,6 +60,9 @@ def get_listings(
     region: Optional[str] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
+    listing_type: Optional[Literal["rent", "sale"]] = Query(
+        None, description="Only allow 'rent' or 'sale'"
+    ),
 ):
     return get_all_listings(
         db=db,
@@ -68,6 +71,7 @@ def get_listings(
         region=region,
         min_price=min_price,
         max_price=max_price,
+        listing_type=listing_type,
     )
 
 
