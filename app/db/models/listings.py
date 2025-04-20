@@ -9,6 +9,7 @@ class Listing(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     listing_id = Column(String, unique=True, nullable=False, index=True)
+    listing_type = Column(Text, index=True)
     url = Column(Text)
     title = Column(Text)
     price = Column(Integer)

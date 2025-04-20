@@ -22,6 +22,7 @@ class ListingBase(BaseModel):
 
 class ListingShort(BaseModel):
     listing_id: str
+    listing_type: Optional[str]
     title: Optional[str]
     price: Optional[int]
     region: Optional[str]
@@ -30,6 +31,7 @@ class ListingShort(BaseModel):
 
 class ListingCreate(ListingBase):
     listing_id: str
+    listing_type: Optional[str]
     url: Optional[str]
 
 

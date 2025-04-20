@@ -12,17 +12,17 @@ dev-add:
 run-api:
 	poetry run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
-run-dashboard:
-	poetry run streamlit run dashboard/app.py
-
 run-scraper:
-	poetry run python run_scraper.py
+	caffeinate -i poetry run python run_pipeline.py --step scrape --listing_type rent
+	caffeinate -i poetry run python run_pipeline.py --step scrape --listing_type sale
 
-train-model:
-	poetry run python src/model/train.py
+run-publisher:
+	poetry run python run_pipeline.py --step publish --listing_type rent
+	poetry run python run_pipeline.py --step publish --listing_type sale
 
-monitor:
-	poetry run python monitoring/run_monitoring.py
+run-pipeline:
+	make run-scraper
+	make run-publisher
 
 format:
 	poetry run black .
@@ -30,9 +30,6 @@ format:
 
 lint:
 	poetry run ruff check .
-
-test:
-	poetry run pytest tests/
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -r {} +

@@ -1,7 +1,7 @@
 import os
-import random
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 
 from loguru import logger
 
@@ -11,13 +11,13 @@ from src.utils.scraper_utils import extract_listing_id, init_browser, save_json
 from src.utils.settings import RAW_DIR
 
 
-def scrape_single_listing(url: str) -> dict | None:
+def scrape_single_listing(url: str, listing_type: str) -> dict | None:
     driver = init_browser()
     try:
         extracted_id = extract_listing_id(url)
         if extracted_id:
-            time.sleep(random.uniform(2, 3))
-            return extract_detail_from_page(driver, url, extracted_id)
+            time.sleep(3)
+            return extract_detail_from_page(driver, url, extracted_id, listing_type)
         else:
             logger.warning(f"[SKIPPING] Not apartment listing: {url}")
     except Exception as e:
@@ -27,10 +27,11 @@ def scrape_single_listing(url: str) -> dict | None:
     return None
 
 
-def run_scraper() -> bool:
+def run_scraper(listing_type: str = "rent") -> bool:
     driver = init_browser()
+
     try:
-        links = get_listing_links(driver)
+        links = get_listing_links(driver, listing_type)
         logger.info(f"Found {len(links)} links to scrape")
     except Exception:
         logger.exception("Failed to collect links")
@@ -43,7 +44,10 @@ def run_scraper() -> bool:
     try:
         max_workers = min(8, os.cpu_count())
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(scrape_single_listing, url) for url in links]
+            futures = [
+                executor.submit(scrape_single_listing, url, listing_type)
+                for url in links
+            ]
             for i, future in enumerate(as_completed(futures), start=1):
                 result = future.result()
                 if result:
@@ -59,6 +63,9 @@ def run_scraper() -> bool:
         logger.warning("No listings were scraped.")
         return False
 
-    save_json(f"{RAW_DIR}/apartment_listings.json", records)
-    logger.info(f"Saved {len(records)} listings to apartment_listings.json")
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    save_json(f"{RAW_DIR}/apartment_listings_{listing_type}_{timestamp}.json", records)
+    logger.info(
+        f"Saved {len(records)} listings to apartment_listings_{listing_type}_{timestamp}.json"
+    )
     return True
