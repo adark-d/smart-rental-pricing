@@ -15,16 +15,19 @@ from src.utils.scraper_utils import (
 )
 
 
-def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None:
+def extract_detail_from_page(
+    driver, url: str, extracted_id: str, listing_type: str
+) -> dict | None:
     try:
         driver.get(url)
+        time.sleep(5)
 
         if "HTTP ERROR 429" in driver.page_source:
             logger.warning("Received 429 error. Sleeping before retry...")
             time.sleep(60)
             driver.refresh()
 
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 15)
 
         # Title
         try:
@@ -39,7 +42,10 @@ def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None
         price = None
         for selector in [".qa-advert-price-view-value", ".b-advert-price__value"]:
             try:
-                price = driver.find_element(By.CSS_SELECTOR, selector).text.strip()
+                price = wait.until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                ).text.strip()
+
                 if price:
                     break
             except NoSuchElementException:
@@ -49,9 +55,14 @@ def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None
 
         # Location metadata
         try:
-            location_raw = driver.find_element(
-                By.CSS_SELECTOR,
-                ".b-advert-info-statistics.b-advert-info-statistics--region, .qa-advert-location",
+            location_raw = wait.until(
+                EC.presence_of_element_located(
+                    (
+                        By.CSS_SELECTOR,
+                        ".b-advert-info-statistics.b-advert-info-statistics--region, \
+                        .qa-advert-location",
+                    )
+                )
             ).text.strip()
             parts = [part.strip() for part in location_raw.split(",")]
             region = parts[0] if len(parts) > 0 else ""
@@ -64,7 +75,7 @@ def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None
         # Icon features
         icon_features = {}
         try:
-            WebDriverWait(driver, 5).until(
+            wait.until(
                 EC.presence_of_all_elements_located(
                     (By.CLASS_NAME, "b-advert-icon-attribute")
                 )
@@ -90,7 +101,7 @@ def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None
         # Advert features
         features = {}
         try:
-            WebDriverWait(driver, 5).until(
+            wait.until(
                 EC.presence_of_all_elements_located(
                     (By.CLASS_NAME, "b-advert-attribute")
                 )
@@ -139,8 +150,10 @@ def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None
 
         # Description
         try:
-            raw_description = driver.find_element(
-                By.CSS_SELECTOR, ".qa-description-text, .b-advert-description"
+            raw_description = wait.until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, ".qa-description-text, .b-advert-description")
+                )
             ).text.strip()
         except NoSuchElementException:
             logger.warning(f"[MISSING] Description not found for: {url}")
@@ -163,6 +176,7 @@ def extract_detail_from_page(driver, url: str, extracted_id: str) -> dict | None
         return {
             "url": url,
             "listing_id": extracted_id,
+            "listing_type": listing_type,
             "title": title,
             "price": clean_price(price),
             "region": region,
