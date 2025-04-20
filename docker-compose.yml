@@ -1,47 +1,28 @@
-version: '3.8'
-
 services:
+  db:
+    image: postgres:15
+    container_name: listings
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   api:
-    build: ./docker/api
-    container_name: rental_api
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./api:/app/api
-      - ./src:/app/src
-    environment:
-      - ENV=dev
-    depends_on:
-      - mlflow
+      build:
+        context: .
+      container_name: fastapi_app
+      command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+      ports:
+        - "8000:8000"
+      volumes:
+        - .:/app
+      depends_on:
+        - db
+      env_file:
+        - .env
 
-  dashboard:
-    build: ./docker/dashboard
-    container_name: rental_dashboard
-    ports:
-      - "8501:8501"
-    volumes:
-      - ./dashboard:/app/dashboard
-    command: streamlit run app.py --server.port=8501
-
-  mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.11.1
-    container_name: rental_mlflow
-    ports:
-      - "5000:5000"
-    environment:
-      - MLFLOW_TRACKING_URI=http://0.0.0.0:5000
-    volumes:
-      - ./mlruns:/mlflow/mlruns
-    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlflow/mlruns
-
-  airflow:
-    build: ./docker/airflow
-    container_name: rental_airflow
-    ports:
-      - "8080:8080"
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-    command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com && airflow webserver"
+volumes:
+  postgres_data:

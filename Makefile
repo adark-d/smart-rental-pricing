@@ -16,7 +16,7 @@ run-dashboard:
 	poetry run streamlit run dashboard/app.py
 
 run-scraper:
-	poetry run python scraper/jiji_scraper.py
+	poetry run python run_scraper.py
 
 train-model:
 	poetry run python src/model/train.py

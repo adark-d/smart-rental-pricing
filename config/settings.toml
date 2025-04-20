@@ -1,8 +1,0 @@
-[default]
-data_path = "@env:DATA_PATH"
-db_path = "@env:DB_PATH"
-mlflow_uri = "@env:MLFLOW_TRACKING_URI"
-mlflow_experiment = "@env:MLFLOW_EXPERIMENT_NAME"
-app_env = "@env:APP_ENV"
-app_port = "@env:APP_PORT"
-api_key = "@env:API_KEY"
