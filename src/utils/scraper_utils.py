@@ -8,13 +8,21 @@ from selenium.webdriver.chrome.options import Options
 from src.utils.settings import settings
 
 
-def init_browser() -> webdriver.Chrome:
-    options = Options()
+def init_browser():
+    chrome_options = Options()
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+
     if settings.headless:
-        options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-gpu")
-    return webdriver.Chrome(options=options)
+        chrome_options.add_argument("--headless=new")
+        chrome_options.add_argument(
+            "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
+                                AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36"
+        )
+
+    return webdriver.Chrome(options=chrome_options)
 
 
 def extract_listing_id(url: str) -> str:
