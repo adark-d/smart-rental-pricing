@@ -6,9 +6,8 @@ from loguru import logger
 
 from src.publisher.publisher import run_publisher
 from src.scraper.scraper import run_scraper
+from src.utils.publisher_utils import get_latest_scraped_file
 from src.utils.settings import LOG_DIR, RAW_DIR
-
-DEFAULT_FILE = RAW_DIR / "apartment_listings.json"
 
 
 def setup_logger(step: str, debug: bool = False):
@@ -34,9 +33,6 @@ def setup_logger(step: str, debug: bool = False):
 def parse_args():
     parser = argparse.ArgumentParser(description="Run scraper and/or publish listings")
     parser.add_argument(
-        "--file", type=str, default=str(DEFAULT_FILE), help="Path to scraped JSON file"
-    )
-    parser.add_argument(
         "--limit", type=int, default=None, help="Limit number of listings"
     )
     parser.add_argument(
@@ -44,26 +40,33 @@ def parse_args():
     )
     parser.add_argument(
         "--step",
-        choices=["scrape", "publish", "all"],
+        choices=["scrape", "publish"],
         default="all",
-        help="Which step(s) to run: scrape, publish, or all",
+        help="Which step(s) to run: scrape, or publish",
     )
     parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug-level logging",
     )
+    parser.add_argument(
+        "--listing_type",
+        choices=["rent", "sale"],
+        default="rent",
+        help="Choose rent or sale listing type",
+    )
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
-    if args.step in ["scrape", "all"]:
+    if args.step == "scrape":
         setup_logger("scraper", debug=args.debug)
         try:
-            logger.info("Starting scraper step...")
-            scrape_success = run_scraper()
+            logger.info(f"Starting scraper step for {args.listing_type}...")
+            scrape_success = run_scraper(args.listing_type)
             if not scrape_success:
                 logger.error("Scraper step failed. Pipeline halted.")
                 return 1
@@ -71,11 +74,20 @@ def main():
             logger.exception(f"Scraper crashed: {e}")
             return 1
 
-    if args.step in ["publish", "all"]:
+    if args.step == "publish":
         setup_logger("publisher", debug=args.debug)
         try:
-            logger.info("Starting publisher step...")
-            publish_success = run_publisher(args.file, args.threads, args.limit)
+            try:
+                DEFAULT_FILE = get_latest_scraped_file(RAW_DIR, args.listing_type)
+            except FileNotFoundError:
+                logger.error(
+                    f"File not found for {args.listing_type} listings. Pipeline halted."
+                )
+                return 1
+
+            logger.info(f"Starting publisher step for {args.listing_type}...")
+
+            publish_success = run_publisher(DEFAULT_FILE, args.threads, args.limit)
             if not publish_success:
                 logger.error("Publisher step failed. Pipeline halted.")
                 return 1
