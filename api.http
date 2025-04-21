@@ -1,0 +1,34 @@
+### Create a new listing
+POST http://localhost:8000/listing
+Content-Type: application/json
+
+{
+  "listing_id": "abcd1234",
+  "listing_type": "rent",
+  "url": "https://example.com/listing/abcd1234",
+  "title": "Modern 2BR Apartment",
+  "price": 2500,
+  "region": "Greater Accra",
+  "area": "East Legon",
+  "bedrooms": 2,
+  "bathrooms": 1,
+  "house_type": "Apartment",
+  "posted_date": "2024-03-01T12:30:00",
+  "amenities": "Air Conditioning, Balcony",
+  "description": "A spacious modern apartment...",
+  "features": {
+    "furnishing": "Furnished"
+  }
+}
+
+
+### Get all listings
+GET http://localhost:8000/listings
+
+
+### Get listing by ID
+GET http://localhost:8000/listing/abcd1234
+
+
+### Delete listing by ID
+DELETE http://localhost:8000/listing/abcd1234
