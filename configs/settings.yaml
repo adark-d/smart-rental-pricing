@@ -1,8 +1,9 @@
 # === Paths ===
 data_dir: "data/"
 raw_data_dir: "data/raw/"
-processed_data_dir: "data/processed/"
-failed_data_dir: "data/raw/failed_data/"
+cleaned_data_dir: "data/cleaned/"
+failed_data_dir: "data/failed/"
+compressed_data_dir: "data/compressed/"
 logs_dir: "logs/"
 
 # === Scraper Settings ===
@@ -10,6 +11,3 @@ base_url_rent: https://jiji.com.gh/houses-apartments-for-rent
 base_url_sale: https://jiji.com.gh/houses-apartments-for-sale
 scroll_count: -1
 headless: True
-
-# === Database Settings ===
-table_name: raw_listings
