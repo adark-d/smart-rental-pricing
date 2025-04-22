@@ -63,9 +63,9 @@ def run_scraper(listing_type: str = "rent") -> bool:
         logger.warning("No listings were scraped.")
         return False
 
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    save_json(f"{RAW_DIR}/apartment_listings_{listing_type}_{timestamp}.json", records)
-    logger.info(
-        f"Saved {len(records)} listings to apartment_listings_{listing_type}_{timestamp}.json"
-    )
+    save_json(f"{RAW_DIR}/{listing_type}_{timestamp}.json", records)
+    logger.info(f"Saved {len(records)} listings to {listing_type}_{timestamp}.json")
     return True
