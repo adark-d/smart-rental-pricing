@@ -30,12 +30,14 @@ def send_listing_to_api(data: dict) -> tuple[str, bool]:
 
 def write_failed_listing(listing: dict):
     listing_id = listing.get("listing_id") or str(time.time())
-    file_path = FAILED_DIR / f"{listing_id}.json"
-    with open(file_path, "w") as f:
+    listing_type = listing.get("listing_type")
+
+    FAILED_DIR.mkdir(parents=True, exist_ok=True)
+    with open(f"{FAILED_DIR}/{listing_type}_failed_{listing_id}.json", "w") as f:
         json.dump(listing, f, indent=2)
 
 
-def run_publisher(file: str, threads: int, limit: int | None = None) -> bool:
+def run_publisher_api(file: str, threads: int, limit: int | None = None) -> bool:
     input_path = Path(file)
     if not input_path.exists():
         logger.error(f"File not found: {input_path}")
