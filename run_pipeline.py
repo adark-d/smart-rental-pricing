@@ -4,16 +4,29 @@ import sys
 
 from loguru import logger
 
-from src.publisher.publisher import run_publisher
+from src.cleaner.cleaner import run_cleaner
+from src.publisher.publisher_api import run_publisher_api
+from src.publisher.publisher_s3 import run_publisher_s3
 from src.scraper.scraper import run_scraper
 from src.utils.publisher_utils import get_latest_scraped_file
-from src.utils.settings import LOG_DIR, RAW_DIR
+from src.utils.settings import CLEANED_DIR, LOG_DIR, RAW_DIR
+
+# -------------------------
+# Step mapping dictionary
+# -------------------------
+VALID_STEPS = {
+    "scrape": run_scraper,
+    "clean": run_cleaner,
+    "publish_api": run_publisher_api,
+    "publish_s3": run_publisher_s3,
+}
 
 
+# -------------------------
+# Setup logging
+# -------------------------
 def setup_logger(step: str, debug: bool = False):
-    os.makedirs(LOG_DIR, exist_ok=True)
     log_file = LOG_DIR / f"{step}.log"
-
     logger.remove()
     logger.add(
         log_file,
@@ -30,74 +43,110 @@ def setup_logger(step: str, debug: bool = False):
     )
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Run scraper and/or publish listings")
-    parser.add_argument(
-        "--limit", type=int, default=None, help="Limit number of listings"
-    )
-    parser.add_argument(
-        "--threads", type=int, default=os.cpu_count(), help="Number of threads to use"
-    )
+# -------------------------
+# Parse CLI arguments
+# -------------------------
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Run real estate pipeline step.")
+
     parser.add_argument(
         "--step",
-        choices=["scrape", "publish"],
-        default="all",
-        help="Which step(s) to run: scrape, or publish",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug-level logging",
+        choices=["scrape", "clean", "publish_api", "publish_s3"],
+        required=True,
+        help="Pipeline step to execute.",
     )
     parser.add_argument(
         "--listing_type",
         choices=["rent", "sale"],
         default="rent",
-        help="Choose rent or sale listing type",
+        help="Specify listing type (rent or sale).",
+    )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=os.cpu_count(),
+        help="Number of threads for publishing to API.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit number of listings to publish.",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging.",
     )
 
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
-
+# -------------------------
+# Prepare arguments for step
+# -------------------------
+def prepare_step_parameters(args):
     if args.step == "scrape":
-        setup_logger("scraper", debug=args.debug)
-        try:
-            logger.info(f"Starting scraper step for {args.listing_type}...")
-            scrape_success = run_scraper(args.listing_type)
-            if not scrape_success:
-                logger.error("Scraper step failed. Pipeline halted.")
-                return 1
-        except Exception as e:
-            logger.exception(f"Scraper crashed: {e}")
+        return {"listing_type": args.listing_type}
+
+    elif args.step == "clean":
+        raw_file = get_latest_scraped_file(RAW_DIR, args.listing_type)
+        return {"file": raw_file, "listing_type": args.listing_type}
+
+    elif args.step == "publish_api":
+        cleaned_file = get_latest_scraped_file(CLEANED_DIR, args.listing_type)
+        return {
+            "file": cleaned_file,
+            "threads": args.threads,
+            "limit": args.limit,
+        }
+
+    elif args.step == "publish_s3":
+        cleaned_file = get_latest_scraped_file(CLEANED_DIR, args.listing_type)
+        return {
+            "file": cleaned_file,
+            "listing_type": args.listing_type,
+        }
+
+    return {}
+
+
+# -------------------------
+# Run pipeline entrypoint
+# -------------------------
+def main_pipeline(args):
+    step = args.step
+
+    if step not in VALID_STEPS:
+        logger.error(f"Invalid step: {step}")
+        return 1
+
+    setup_logger(step, debug=args.debug)
+
+    try:
+        step_function = VALID_STEPS[step]
+        step_params = prepare_step_parameters(args)
+
+        logger.info(f"Starting '{step}' step for {args.listing_type}...")
+
+        result = step_function(**step_params)
+
+        if result is False:
+            logger.critical(f"Step '{step}' failed.")
             return 1
 
-    if args.step == "publish":
-        setup_logger("publisher", debug=args.debug)
-        try:
-            try:
-                DEFAULT_FILE = get_latest_scraped_file(RAW_DIR, args.listing_type)
-            except FileNotFoundError:
-                logger.error(
-                    f"File not found for {args.listing_type} listings. Pipeline halted."
-                )
-                return 1
+        logger.success(f"Step '{step}' completed successfully.")
+        return 0
 
-            logger.info(f"Starting publisher step for {args.listing_type}...")
-
-            publish_success = run_publisher(DEFAULT_FILE, args.threads, args.limit)
-            if not publish_success:
-                logger.error("Publisher step failed. Pipeline halted.")
-                return 1
-        except Exception as e:
-            logger.exception(f"Publisher crashed: {e}")
-            return 1
-
-    logger.success("Pipeline completed successfully.")
-    return 0
+    except FileNotFoundError as e:
+        logger.error(f"[File Missing] {e}")
+        return 1
+    except Exception as e:
+        logger.exception(f"Step '{step}' crashed with error: {e}")
+        return 1
 
 
 if __name__ == "__main__":
-    exit(main())
+    args = parse_arguments()
+    exit_code = main_pipeline(args)
+    sys.exit(exit_code)

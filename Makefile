@@ -16,13 +16,24 @@ run-scraper:
 	caffeinate -i poetry run python run_pipeline.py --step scrape --listing_type rent
 	caffeinate -i poetry run python run_pipeline.py --step scrape --listing_type sale
 
-run-publisher:
-	poetry run python run_pipeline.py --step publish --listing_type rent
-	poetry run python run_pipeline.py --step publish --listing_type sale
+run-cleaner:
+	poetry run python run_pipeline.py --step clean --listing_type rent
+	poetry run python run_pipeline.py --step clean --listing_type sale
+
+run-publisher-api:
+	poetry run python run_pipeline.py --step publish_api --listing_type rent
+	poetry run python run_pipeline.py --step publish_api --listing_type sale
+
+run-publisher-s3:
+	poetry run python run_pipeline.py --step publish_s3 --listing_type rent
+	poetry run python run_pipeline.py --step publish_s3 --listing_type sale
 
 run-pipeline:
 	make run-scraper
-	make run-publisher
+	make run-cleaner
+	make run-publisher-api
+	make run-publisher-s3
+	
 
 format:
 	poetry run black .

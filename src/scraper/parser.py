@@ -7,13 +7,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from src.utils.scraper_utils import (
-    clean_price,
-    parse_features,
-    parse_posted_time,
-    safe_int,
-)
-
 
 def extract_detail_from_page(
     driver, url: str, extracted_id: str, listing_type: str
@@ -86,11 +79,11 @@ def extract_detail_from_page(
                     if "bedroom" in text:
                         match = re.search(r"(\d+)", text)
                         if match:
-                            icon_features["bedrooms"] = safe_int(match.group(1))
+                            icon_features["bedrooms"] = match.group(1)
                     elif "bathroom" in text:
                         match = re.search(r"(\d+)", text)
                         if match:
-                            icon_features["bathrooms"] = safe_int(match.group(1))
+                            icon_features["bathrooms"] = match.group(1)
                     else:
                         icon_features["house_type"] = text.capitalize()
                 except Exception as e:
@@ -178,14 +171,14 @@ def extract_detail_from_page(
             "listing_id": extracted_id,
             "listing_type": listing_type,
             "title": title,
-            "price": clean_price(price),
+            "price": price,
             "region": region,
             "area": area,
             **icon_features,
-            "posted_date": parse_posted_time(posted_time),
+            "posted_date": posted_time,
             "amenities": amenities_str,
             "description": description,
-            "features": parse_features(features),
+            "features": features,
         }
 
     except Exception as final_e:
