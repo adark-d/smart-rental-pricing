@@ -1,4 +1,5 @@
 services:
+  # === PostgreSQL DB ===
   db:
     image: postgres:15
     container_name: listings
@@ -9,20 +10,28 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
 
+  # === FastAPI App ===
   api:
-      build:
-        context: .
-      container_name: fastapi_app
-      command: uvicorn app.main:app --host 0.0.0.0 --port 8000
-      ports:
-        - "8000:8000"
-      volumes:
-        - .:/app
-      depends_on:
-        - db
-      env_file:
-        - .env
+    build:
+      context: .
+    container_name: fastapi_app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - backend
 
 volumes:
   postgres_data:
+
+networks:
+  backend:
