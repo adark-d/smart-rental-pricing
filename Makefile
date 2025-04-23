@@ -34,7 +34,12 @@ run-pipeline:
 	make run-publisher-api
 	make run-publisher-s3
 	
+run-auto:
+	docker compose run --rm api alembic revision --autogenerate -m "Initial schema"
 
+run-upgrade:
+	docker compose run --rm api alembic upgrade head
+	
 format:
 	poetry run black .
 	poetry run ruff check . --fix
