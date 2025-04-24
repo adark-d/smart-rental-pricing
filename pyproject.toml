@@ -1,33 +1,36 @@
 [tool.poetry]
 name = "smart-rental-pricing"
 version = "0.1.0"
-description = "Smart rental pricing for houses in Accra"
+description = "Smart rental pricing and listing data pipeline for real estate in Ghana"
 authors = ["Dave <davidwyse48@gmail.com>"]
 readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.scripts]
+smart-rental-pricing = "run_pipeline:main_pipeline"
+run-scraper = "run_pipeline:main_pipeline"
 
 [tool.poetry.dependencies]
 python = "^3.11"
 numpy = "^1.26"
-evidently = "^0.7.0"
 plotly = "^5.17.0"
 pandas = "^2.2.3"
-scikit-learn = "^1.6.1"
 joblib = "^1.4.2"
 fastapi = "^0.115.12"
 uvicorn = "^0.34.1"
-streamlit = "^1.44.1"
-mlflow = "^2.21.3"
 selenium = "^4.31.0"
 python-dotenv = "^1.1.0"
 requests = "^2.32.3"
 dynaconf = "^3.2.10"
 loguru = "^0.7.3"
-sqlalchemy = "^2.0.40"
+sqlalchemy = "^2.0.0"
 orjson = "^3.10.16"
 alembic = "^1.15.2"
 psycopg2-binary = "^2.9.10"
 ipykernel = "^6.29.5"
 boto3 = "^1.37.37"
+botocore = "^1.33.37"
+
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"

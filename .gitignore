@@ -121,3 +121,15 @@ dmypy.json
 .vscode
 
 data/
+
+# Airflow
+airflow/logs/
+airflow/.venv/
+logs/
+
+# Data files but keep directories
+data/**/
+!data/**/*/
+!data/**/
+!data/*/
+!data/README.md

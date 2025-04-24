@@ -26,9 +26,7 @@ def init_browser():
 
 def extract_listing_id(url: str) -> str:
     match = re.search(r"-([a-zA-Z0-9]+)\.html", url)
-    if match:
-        return match.group(1)
-    return None
+    return match.group(1) if match else None
 
 
 def save_json(output_file_path: str, data: dict) -> None:

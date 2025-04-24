@@ -1,49 +1,55 @@
-FROM apache/airflow:2.8.0-python3.11
+# Base: lightweight Airflow with Python 3.11
+FROM apache/airflow:slim-2.8.1-python3.11
 
+# Switch to root for system packages
 USER root
 
-# --- System dependencies & Chromium ---
-RUN apt-get update && apt-get install -y \
-    chromium \
-    chromium-driver \
-    libglib2.0-0 \
-    libnss3 \
-    libgconf-2-4 \
-    libfontconfig1 \
-    libxss1 \
-    libappindicator3-1 \
-    fonts-liberation \
-    libatk-bridge2.0-0 \
-    libgtk-3-0 \
-    libgbm1 \
-    xdg-utils \
+# Install PostgreSQL client, AWS CLI, and other dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
     curl \
-    wget \
-    unzip
+    unzip \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN ln -s /usr/bin/chromium /usr/bin/google-chrome
+# Install AWS CLI
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip aws
 
-# Switch to airflow
+# Make directories accessible
+RUN mkdir -p /opt/airflow/logs \
+    /opt/airflow/dags \
+    /opt/airflow/plugins \
+    /opt/airflow/data \
+    /opt/airflow/data/raw \
+    /opt/airflow/data/cleaned \
+    /opt/airflow/data/failed \
+    /opt/airflow/data/compressed && \
+    chown -R airflow:0 /opt/airflow && \
+    chmod -R 775 /opt/airflow
+
+# Switch to airflow user for pip installations
 USER airflow
-WORKDIR ${AIRFLOW_HOME}
+WORKDIR /opt/airflow
 
-# Install Poetry and dependencies
-RUN pip install --user poetry
+# Install all required Python dependencies for the pipeline
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    loguru==0.7.3 \
+    numpy==1.26.0 \
+    pandas==2.2.3 \
+    plotly==5.17.0 \
+    requests==2.32.3 \
+    joblib==1.4.2 \
+    dynaconf==3.2.10 \
+    orjson==3.10.16 \
+    psycopg2-binary==2.9.10 \
+    boto3==1.37.37 \
+    python-dotenv==1.1.0 \
+    apache-airflow-providers-amazon>=8.0.0
 
-ENV PATH="${PATH}:/home/airflow/.local/bin"
-
-# Set fixed Poetry virtualenv path
-RUN poetry config virtualenvs.create true && \
-    poetry config virtualenvs.path /opt/airflow/.venv
-
-# Install dependencies
-COPY pyproject.toml poetry.lock* ./
-RUN poetry install --no-root --no-interaction
-
-# Copy code and DAGs
-COPY run_pipeline.py ./run_pipeline.py
-COPY src ./src
-COPY configs ./configs
-COPY airflow/dags ./dags
-COPY airflow/plugins ./plugins
-COPY .env .env
+# Set up environment variables
+ENV PYTHONPATH="/opt/airflow:/opt/airflow/dags:/opt/airflow/plugins:/home/airflow/.local/lib/python3.11/site-packages:${PYTHONPATH}"
+ENV PATH="/home/airflow/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH}"

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.v1.endpoints import listings, meta
-from app.api.v1.endpoints.health import health_check
+from app.api.v1.endpoints.health import router as health_router
 from app.core.tags import tags_metadata
 from src.utils.settings import settings
 
@@ -15,6 +15,6 @@ app = FastAPI(
     openapi_tags=tags_metadata,
 )
 
-app.include_router(listings.router, prefix="", tags=["Listings"])
-app.include_router(meta.router, prefix="", tags=["Meta"])
-app.add_api_route("/", endpoint=health_check, methods=["GET"], tags=["Health"])
+app.include_router(listings.router, prefix="/api/v1", tags=["Listings"])
+app.include_router(meta.router, prefix="/api/v1", tags=["Meta"])
+app.include_router(health_router, prefix="/api/v1/health", tags=["Health"])

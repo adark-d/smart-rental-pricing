@@ -8,7 +8,7 @@ from loguru import logger
 
 from src.utils.settings import FAILED_DIR, settings
 
-API_URL = settings.api_url
+API_URL = settings.get("API_URL", "http://localhost:8000")
 
 
 def send_listing_to_api(data: dict) -> tuple[str, bool]:
