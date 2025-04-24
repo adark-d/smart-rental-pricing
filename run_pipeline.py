@@ -6,8 +6,7 @@ from loguru import logger
 
 from src.cleaner.cleaner import run_cleaner
 from src.publisher.publisher_api import run_publisher_api
-from src.publisher.publisher_s3 import run_publisher_s3
-from src.scraper.scraper import run_scraper
+from src.scraper.scraper import run_scraper, trigger_airflow_dag
 from src.utils.publisher_utils import get_latest_scraped_file
 from src.utils.settings import CLEANED_DIR, LOG_DIR, RAW_DIR
 
@@ -18,7 +17,7 @@ VALID_STEPS = {
     "scrape": run_scraper,
     "clean": run_cleaner,
     "publish_api": run_publisher_api,
-    "publish_s3": run_publisher_s3,
+    "trigger-dag": trigger_airflow_dag,
 }
 
 
@@ -51,7 +50,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--step",
-        choices=["scrape", "clean", "publish_api", "publish_s3"],
+        choices=["scrape", "clean", "publish_api", "trigger-dag"],
         required=True,
         help="Pipeline step to execute.",
     )
@@ -78,6 +77,14 @@ def parse_arguments():
         action="store_true",
         help="Enable debug logging.",
     )
+    parser.add_argument(
+        "--rent-path",
+        help="S3 path to rent listings data (for trigger-dag step)",
+    )
+    parser.add_argument(
+        "--sale-path",
+        help="S3 path to sale listings data (for trigger-dag step)",
+    )
 
     return parser.parse_args()
 
@@ -101,12 +108,23 @@ def prepare_step_parameters(args):
             "limit": args.limit,
         }
 
-    elif args.step == "publish_s3":
-        cleaned_file = get_latest_scraped_file(CLEANED_DIR, args.listing_type)
-        return {
-            "file": cleaned_file,
-            "listing_type": args.listing_type,
-        }
+    elif args.step == "trigger-dag":
+        # For triggering the Airflow DAG with S3 paths
+        s3_paths = {}
+        if args.rent_path:
+            s3_paths["rent"] = args.rent_path
+        if args.sale_path:
+            s3_paths["sale"] = args.sale_path
+
+        if not s3_paths:
+            logger.error(
+                "At least one S3 path (--rent-path or --sale-path) must be provided for \
+                trigger-dag step"
+            )
+            sys.exit(1)
+
+        # The trigger_airflow_dag function expects a parameter called 's3_paths'
+        return {"s3_paths": s3_paths}
 
     return {}
 
