@@ -11,3 +11,20 @@ base_url_rent: https://jiji.com.gh/houses-apartments-for-rent
 base_url_sale: https://jiji.com.gh/houses-apartments-for-sale
 scroll_count: 1
 headless: True
+
+# Optional: specify custom Chrome binary path if you have a non-standard installation
+# If not specified or path doesn't exist, the system default will be used
+# For macOS, common path might be:
+# chrome_binary_path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# For Linux:
+# chrome_binary_path: "/usr/bin/google-chrome"
+chrome_binary_path: ""
+
+# Note: chromedriver_path is no longer needed as webdriver-manager handles this automatically
+
+# === Airflow Configuration ===
+# The base URL for the Airflow webserver
+AIRFLOW_API_URL: "http://localhost:8080"
+# Airflow credentials (default is admin/admin for new installations)
+AIRFLOW_USERNAME: "admin" 
+AIRFLOW_PASSWORD: "admin"
