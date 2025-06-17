@@ -30,6 +30,7 @@ psycopg2-binary = "^2.9.10"
 ipykernel = "^6.29.5"
 boto3 = "^1.37.37"
 botocore = "^1.33.37"
+more-itertools = "^10.7.0"
 
 
 [tool.poetry.group.dev.dependencies]
