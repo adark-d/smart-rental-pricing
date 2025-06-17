@@ -1,31 +1,25 @@
 import argparse
-import os
 import sys
+from pathlib import Path
 
 from loguru import logger
 
 from src.cleaner.cleaner import run_cleaner
-from src.publisher.publisher_api import run_publisher_api
-from src.scraper.scraper import run_scraper, trigger_airflow_dag
-from src.utils.publisher_utils import get_latest_scraped_file
-from src.utils.settings import CLEANED_DIR, LOG_DIR, RAW_DIR
+from src.scraper.scraper import run_scraper
+from src.utils.settings import settings
 
-# -------------------------
-# Step mapping dictionary
-# -------------------------
 VALID_STEPS = {
     "scrape": run_scraper,
     "clean": run_cleaner,
-    "publish_api": run_publisher_api,
-    "trigger-dag": trigger_airflow_dag,
 }
 
 
-# -------------------------
-# Setup logging
-# -------------------------
 def setup_logger(step: str, debug: bool = False):
-    log_file = LOG_DIR / f"{step}.log"
+    log_dir = Path(settings.paths.logs_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    log_file = log_dir / f"{step}.log"
+
     logger.remove()
     logger.add(
         log_file,
@@ -42,17 +36,20 @@ def setup_logger(step: str, debug: bool = False):
     )
 
 
-# -------------------------
-# Parse CLI arguments
-# -------------------------
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run real estate pipeline step.")
 
     parser.add_argument(
         "--step",
-        choices=["scrape", "clean", "publish_api", "trigger-dag"],
+        choices=["scrape", "clean"],
         required=True,
         help="Pipeline step to execute.",
+    )
+    parser.add_argument(
+        "--source",
+        choices=["tonaton", "jiji"],
+        required=True,
+        help="Pipeline source to execute.",
     )
     parser.add_argument(
         "--listing_type",
@@ -61,77 +58,23 @@ def parse_arguments():
         help="Specify listing type (rent or sale).",
     )
     parser.add_argument(
-        "--threads",
-        type=int,
-        default=os.cpu_count(),
-        help="Number of threads for publishing to API.",
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="Limit number of listings to publish.",
-    )
-    parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug logging.",
     )
-    parser.add_argument(
-        "--rent-path",
-        help="S3 path to rent listings data (for trigger-dag step)",
-    )
-    parser.add_argument(
-        "--sale-path",
-        help="S3 path to sale listings data (for trigger-dag step)",
-    )
-
     return parser.parse_args()
 
 
-# -------------------------
-# Prepare arguments for step
-# -------------------------
 def prepare_step_parameters(args):
     if args.step == "scrape":
-        return {"listing_type": args.listing_type}
+        return {"source": args.source, "listing_type": args.listing_type}
 
     elif args.step == "clean":
-        raw_file = get_latest_scraped_file(RAW_DIR, args.listing_type)
-        return {"file": raw_file, "listing_type": args.listing_type}
-
-    elif args.step == "publish_api":
-        cleaned_file = get_latest_scraped_file(CLEANED_DIR, args.listing_type)
-        return {
-            "file": cleaned_file,
-            "threads": args.threads,
-            "limit": args.limit,
-        }
-
-    elif args.step == "trigger-dag":
-        # For triggering the Airflow DAG with S3 paths
-        s3_paths = {}
-        if args.rent_path:
-            s3_paths["rent"] = args.rent_path
-        if args.sale_path:
-            s3_paths["sale"] = args.sale_path
-
-        if not s3_paths:
-            logger.error(
-                "At least one S3 path (--rent-path or --sale-path) must be provided for \
-                trigger-dag step"
-            )
-            sys.exit(1)
-
-        # The trigger_airflow_dag function expects a parameter called 's3_paths'
-        return {"s3_paths": s3_paths}
+        return {"source": args.source, "listing_type": args.listing_type}
 
     return {}
 
 
-# -------------------------
-# Run pipeline entrypoint
-# -------------------------
 def main_pipeline(args):
     step = args.step
 
@@ -145,15 +88,15 @@ def main_pipeline(args):
         step_function = VALID_STEPS[step]
         step_params = prepare_step_parameters(args)
 
-        logger.info(f"Starting '{step}' step for {args.listing_type}...")
-
         result = step_function(**step_params)
 
         if result is False:
-            logger.critical(f"Step '{step}' failed.")
+            logger.critical(f"Step '{step}' for '{args.listing_type}' failed.")
             return 1
 
-        logger.success(f"Step '{step}' completed successfully.")
+        logger.success(
+            f"Step '{step}' for '{args.listing_type}' completed successfully."
+        )
         return 0
 
     except FileNotFoundError as e:
