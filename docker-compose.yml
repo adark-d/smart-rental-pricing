@@ -1,172 +1,106 @@
 services:
-  # === PostgreSQL DB ===
+  # === PostgreSQL Database ===
   db:
-    image: postgres:15
-    container_name: listings
-    restart: always
-    env_file:
-      - .env
+    image: postgres:15-alpine
+    container_name: smart_rental_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-listings_db}"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
+
+  # === Redis Cache (for rate limiting) ===
+  redis:
+    image: redis:7-alpine
+    container_name: smart_rental_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - backend
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
-  # === FastAPI App ===
+  # === FastAPI Application ===
   api:
     build:
       context: .
-    container_name: fastapi_app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+      dockerfile: Dockerfile
+    container_name: smart_rental_api
+    restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - ./logs:/app/logs
       - ./data:/app/data
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
     env_file:
       - .env
     networks:
       - backend
-
-  # === Airflow Components ===
-  postgres_airflow:
-    image: postgres:15
-    container_name: airflow_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - postgres_data_airflow:/var/lib/postgresql/data
-    networks:
-      - backend
-
-  airflow_webserver:
-    build:
-      context: .
-      dockerfile: airflow/Dockerfile
-    container_name: airflow_webserver
-    depends_on:
-      postgres_airflow:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-      api:
-        condition: service_started
-    restart: always
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__WEBSERVER__BASE_URL=http://localhost:8080
-      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
-      - AIRFLOW__WEBSERVER__ENABLE_EXAMPLE_DAGS=false
-      - AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS=false
-      - AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL=30
-      # Pass the main DB connection env vars
-      - POSTGRES_HOST=listings
-      - POSTGRES_USER=${POSTGRES_USER:-adark}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-adark}
-      - POSTGRES_DB=${POSTGRES_DB:-listings_db}
-      - POSTGRES_PORT=5432
-      # API connection
-      - API_URL=http://fastapi_app:8000
-      - API_HOST=fastapi_app
-      - API_PORT=8000
-      # S3 connection
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
-      - S3_BUCKET=${S3_BUCKET:-smart-rental-pricing}
-    env_file:
-      - .env
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./src:/opt/airflow/src
-      - ./data:/opt/airflow/data
-      - ./run_pipeline.py:/opt/airflow/run_pipeline.py
-      - ./configs:/opt/airflow/configs
-      - ./logs:/opt/airflow/logs
-    ports:
-      - "8080:8080"
-    command: >
-      bash -c "airflow db init &&
-               airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin &&
-               airflow webserver"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
-    networks:
-      - backend
+      retries: 3
+      start_period: 40s
 
-  airflow_scheduler:
+  # === Database Migration Service ===
+  migrate:
     build:
       context: .
-      dockerfile: airflow/Dockerfile
-    container_name: airflow_scheduler
+      dockerfile: Dockerfile
+    container_name: smart_rental_migrate
+    command: alembic upgrade head
     depends_on:
-      airflow_webserver:
+      db:
         condition: service_healthy
-    restart: always
     environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
-      - AIRFLOW__WEBSERVER__ENABLE_EXAMPLE_DAGS=false
-      - AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS=false
-      - AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL=30
-      # Pass the main DB connection env vars
-      - POSTGRES_HOST=listings
-      - POSTGRES_USER=${POSTGRES_USER:-adark}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-adark}
-      - POSTGRES_DB=${POSTGRES_DB:-listings_db}
-      - POSTGRES_PORT=5432
-      # API connection
-      - API_URL=http://fastapi_app:8000
-      - API_HOST=fastapi_app
-      - API_PORT=8000
-      # S3 connection
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
-      - S3_BUCKET=${S3_BUCKET:-smart-rental-pricing}
+      - POSTGRES_HOST=db
     env_file:
       - .env
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./src:/opt/airflow/src
-      - ./data:/opt/airflow/data
-      - ./run_pipeline.py:/opt/airflow/run_pipeline.py
-      - ./configs:/opt/airflow/configs
-      - ./logs:/opt/airflow/logs
-    command: airflow scheduler
     networks:
       - backend
+    profiles:
+      - migrate
 
+# === Named Volumes ===
 volumes:
   postgres_data:
-  postgres_data_airflow:
+    driver: local
+  redis_data:
+    driver: local
 
+# === Networks ===
 networks:
   backend:
-    name: rental_pricing_network
     driver: bridge
-    external: true
+    name: smart_rental_network
