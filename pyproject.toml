@@ -23,7 +23,7 @@ python-dotenv = "^1.1.0"
 requests = "^2.32.3"
 dynaconf = "^3.2.10"
 loguru = "^0.7.3"
-sqlalchemy = "^2.0.0"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.41"}
 orjson = "^3.10.16"
 alembic = "^1.15.2"
 psycopg2-binary = "^2.9.10"
@@ -37,6 +37,9 @@ python-jose = {extras = ["cryptography"], version = "^3.5.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 slowapi = "^0.1.9"
 redis = "^6.2.0"
+asyncpg = "^0.30.0"
+python-multipart = "^0.0.20"
+email-validator = "^2.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
