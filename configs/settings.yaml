@@ -1,4 +1,4 @@
-env: prod
+env: dev
 
 paths:
   raw_data_dir: "data/raw"
@@ -7,10 +7,28 @@ paths:
   transformed_data_dir: "data/transformed"
   logs_dir: "logs/"
 
+# Development Settings
+debug: true
+reload: true
 headless: true
+
+# Logging Configuration
+logging:
+  level: INFO
+  format: json
+
+# Rate Limiting
+rate_limiting:
+  enabled: true
+
+# Scraping Configuration
+scraping:
+  enabled: true
+  default_frequency: 24
 
 sources:
   tonaton:
+    enabled: true
     scraper:
       base_url_rent: https://tonaton.com/c_houses-apartments-for-rent
       base_url_sale: https://tonaton.com/c_houses-apartments-for-sale
@@ -18,6 +36,7 @@ sources:
       wait_time: 5
 
   jiji:
+    enabled: true
     scraper:
       base_url_rent: https://jiji.com.gh/houses-apartments-for-rent
       base_url_sale: https://jiji.com.gh/houses-apartments-for-sale
@@ -28,3 +47,14 @@ sources:
     publisher:
       batch_size: 50
       retries: 2
+
+CORSSettings:
+  allow_origins:
+    - "*"
+  allow_credentials: true
+  allow_methods:
+    - "*"
+  allow_headers:
+    - "*"
+
+GZIP_MIN_SIZE: 102400
