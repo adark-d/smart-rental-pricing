@@ -1,5 +1,4 @@
 services:
-  # === PostgreSQL Database ===
   db:
     image: postgres:15-alpine
     container_name: smart_rental_db
@@ -13,7 +12,6 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -23,7 +21,6 @@ services:
     networks:
       - backend
 
-  # === Redis Cache (for rate limiting) ===
   redis:
     image: redis:7-alpine
     container_name: smart_rental_redis
@@ -41,7 +38,6 @@ services:
       - backend
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
-  # === FastAPI Application ===
   api:
     build:
       context: .
@@ -50,9 +46,6 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    volumes:
-      - ./logs:/app/logs
-      - ./data:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -67,40 +60,18 @@ services:
     networks:
       - backend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  # === Database Migration Service ===
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: smart_rental_migrate
-    command: alembic upgrade head
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - POSTGRES_HOST=db
-    env_file:
-      - .env
-    networks:
-      - backend
-    profiles:
-      - migrate
-
-# === Named Volumes ===
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
 
-# === Networks ===
 networks:
   backend:
     driver: bridge
-    name: smart_rental_network
