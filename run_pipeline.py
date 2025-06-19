@@ -163,15 +163,6 @@ def run_single_step(args):
 
 
 def main_pipeline(args):
-    try:
-        logger.info(f"Running in environment: {getattr(settings, 'env', 'dev')}")
-        if hasattr(settings, "API_URL"):
-            logger.info(f"API URL: {settings.API_URL}")
-        if hasattr(settings, "paths"):
-            logger.info(f"Data paths configured: {bool(settings.paths)}")
-    except Exception as e:
-        logger.warning(f"Could not validate environment settings: {e}")
-
     if args.step == "full":
         return run_full_pipeline(args)
     else:
