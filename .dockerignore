@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.env
+
+# Git
+.git
+.gitignore
+
+# Local dev
+.venv/
+.envrc
+.env.local
+
+# Poetry
+poetry.lock.old
+
+# Build
+dist/
+build/
