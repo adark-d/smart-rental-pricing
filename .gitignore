@@ -126,6 +126,7 @@ data/
 airflow/logs/
 airflow/.venv/
 logs/
+sql/
 
 # Data files but keep directories
 data/**/
